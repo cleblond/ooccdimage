@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+
+
+
+<body>
+
+
+    <div id="chemdoodle_div">
+        <meta http-equiv="X-UA-Compatible" content="chrome=1">
+        <link rel="stylesheet" href="../../../../../chemdoodle/ChemDoodleWeb.css" type="text/css">
+        <script type="text/javascript" src="../../../../../chemdoodle/ChemDoodleWeb.js"></script>
+        <!-- <link rel="stylesheet" href="../../../../../css/eocustom.css" type="text/css"> -->
+        <link rel="stylesheet" href="../../../../../chemdoodle/uis/jquery-ui-1.10.3.custom.css" type="text/css">
+        <script type="text/javascript" src="../../../../../chemdoodle/uis/ChemDoodleWeb-uis.js"></script>
+        <script type="text/javascript" src="../../../../../js/jquery-3.1.1.min.js"></script> 
+
+
+        <script>
+          ChemDoodle.ELEMENT['H'].jmolColor = 'black';
+          ChemDoodle.ELEMENT['S'].jmolColor = '#B9A130';
+          var tinymce_sketcher = new ChemDoodle.SketcherCanvas('tinymce_sketcher', 600, 300,{useServices:false});
+          tinymce_sketcher.specs.bondLength_2D = 25;
+          tinymce_sketcher.specs.atoms_displayTerminalCarbonLabels_2D = true;
+          tinymce_sketcher.specs.atoms_useJMOLColors = true;
+          tinymce_sketcher.specs.bonds_clearOverlaps_2D = true;
+          tinymce_sketcher.specs.shapes_color = '#c10000';
+          tinymce_sketcher.repaint();
+          
+          
+          //var args = top.tinymce.activeEditor.windowManager.getParams();
+          //console.log(args.arg1, args.arg2);
+          $(document).ready(function(){
+          //parent.tinymce.activeEditor.windowManager.close();
+          //win.find('#jsmol_script');
+          
+          
+          //alert('here2');
+          
+          $( "#eoinsert" ).click(function() {
+               //alert( "Handler for .click() called." );
+               
+               //var canvas = $('#tinymce_sketcher').val();
+               
+               
+               var canvas = document.getElementById('tinymce_sketcher');
+               var context = canvas.getContext("2d");
+               var data = context.getImageData(0, 0, canvas.width, canvas.height);
+               var compositeOperation = context.globalCompositeOperation;
+               //context.fillStyle = "#FFFFFF";
+               //context.fillRect(0,0,canvas.width,canvas.height);
+               
+               var tempCanvas = document.createElement("canvas"),
+                   tCtx = tempCanvas.getContext("2d");
+               tempCanvas.width = 565;
+               tempCanvas.height = 280;
+               tCtx.drawImage(canvas,0,0);
+               
+               var tempimg =  tCtx.getImageData(0,0,565,280);
+               var tempimgdata = tempimg.data;
+               length = tempimgdata.length;
+               for(var i=3; i < length; i+=4){
+                   if (tempimgdata[i-1] == 255 && tempimgdata[i-2] == 255 && tempimgdata[i-3] == 255) {               
+                       tempimgdata[i] = 0;
+                   }
+               }
+                      
+               
+               tempimg.data = tempimgdata;
+               tCtx.putImageData(tempimg, 0, 0);
+               
+               
+               
+               
+               //var cropimg = tempCanvas.toDataURL("image/png");
+               var cropimg = cropImageFromCanvas(tCtx, tempCanvas);
+               
+               
+        
+                var imgfname = new Date().valueOf();
+                imgfname = 'img'+imgfname+'.png';
+                
+
+                
+                
+                $.ajax({
+                      type: "POST",
+                      url: "saveimage.php",
+                      data: { 
+                         imgBase64: cropimg,
+                         fname: imgfname
+                      }
+                    }).done(function(o) {
+                      //console.log('saved'); 
+                      
+                      
+                      
+                    var img = new Image();
+                    img.src = window.location.origin +'/tsugi/mod/easyochem/uploads/'+imgfname;
+                
+                
+                    parent.tinymce.activeEditor.insertContent(img.outerHTML);
+                    parent.tinymce.activeEditor.windowManager.close();
+                      
+                      // If you want the file to be visible in the browser 
+                      // - please modify the callback in javascript. All you
+                      // need is to return the url to the file, you just saved 
+                      // and than put the image in your browser.
+                    });
+               
+               
+               
+               
+               function cropImageFromCanvas(ctx, canvas) {
+
+                        var w = canvas.width,
+                        h = canvas.height,
+                        pix = {x:[], y:[]},
+                        imageData = ctx.getImageData(0,0,canvas.width,canvas.height),
+                        x, y, index;
+
+                        for (y = 0; y < h; y++) {
+                            for (x = 0; x < w; x++) {
+                                index = (y * w + x) * 4;
+                                if (imageData.data[index+3] > 0) {
+
+                                    pix.x.push(x);
+                                    pix.y.push(y);
+
+                                }   
+                            }
+                        }
+                        pix.x.sort(function(a,b){return a-b});
+                        pix.y.sort(function(a,b){return a-b});
+                        var n = pix.x.length-1;
+
+                        w = pix.x[n] - pix.x[0];
+                        h = pix.y[n] - pix.y[0];
+                        var cut = ctx.getImageData(pix.x[0], pix.y[0], w+1, h+1);
+
+                        canvas.width = w+1;
+                        canvas.height = h+1;
+                        ctx.putImageData(cut, 0, 0);
+
+                        var image = canvas.toDataURL();
+                        
+                        return image;
+                        //var win=window.open(image, '_blank');
+                        //win.focus();
+
+                }
+               
+               
+          });
+          
+          
+          
+          
+          
+          });
+          
+        </script>
+        <button id="eoinsert">INSERT</button>
+
+    </div>
+
+	
+	
+	
+	
+</body>
+</html>
